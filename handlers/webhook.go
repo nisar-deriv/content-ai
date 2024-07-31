@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/regentmarkets/ContentAI/data"
+	"github.com/regentmarkets/ContentAI/nlp"
 )
 
 type SlackPayload struct {
@@ -28,20 +29,17 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse team name from payload
 	teamName, err := parseTeamName(payload.Text)
 	if err != nil {
 		http.Error(w, "Error parsing team name", http.StatusBadRequest)
 		return
 	}
 
-	// Get the current date and calculate the week start (Monday) and end (Friday)
 	now := time.Now()
-	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1) // Monday
-	weekEnd := weekStart.AddDate(0, 0, 4)                 // Friday
+	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
+	weekEnd := weekStart.AddDate(0, 0, 4)
 	weekFolder := fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
 
-	// Create directory if it does not exist
 	if _, err := os.Stat(weekFolder); os.IsNotExist(err) {
 		err := os.Mkdir(weekFolder, 0755)
 		if err != nil {
@@ -50,9 +48,15 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Store the request payload in the appropriate file named after the team
+	// Enhance the text using the NLP model
+	enhancedText, err := nlp.EnhanceText(payload.Text)
+	if err != nil {
+		http.Error(w, "Error processing text with NLP", http.StatusInternalServerError)
+		return
+	}
+
 	filename := fmt.Sprintf("%s/%s.txt", weekFolder, teamName)
-	err = data.WriteToFile(filename, payload.Text)
+	err = data.WriteToFile(filename, enhancedText)
 	if err != nil {
 		http.Error(w, "Error writing to file", http.StatusInternalServerError)
 		return

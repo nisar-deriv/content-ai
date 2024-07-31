@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - .:/app
+      - ./data:/app/data
+
+  report-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile.report
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - web
+    entrypoint: ["sh", "-c", "while sleep 3600; do :; done"]
