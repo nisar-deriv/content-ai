@@ -3,10 +3,12 @@ package nlp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 )
 
-const apiKey = "your-api-key"
+const apiKeyEnv = "OPENAI_API_KEY"
 
 type OpenAIRequest struct {
 	Model     string `json:"model"`
@@ -20,7 +22,13 @@ type OpenAIResponse struct {
 	} `json:"choices"`
 }
 
-func GenerateContent(prompt string) (string, error) {
+func EnhanceText(text string) (string, error) {
+	apiKey := os.Getenv(apiKeyEnv)
+	if apiKey == "" {
+		return "", fmt.Errorf("OpenAI API key not set")
+	}
+
+	prompt := fmt.Sprintf("Enhance the following team update with summaries and insights:\n\n%s", text)
 	requestBody, _ := json.Marshal(OpenAIRequest{
 		Model:     "text-davinci-003",
 		Prompt:    prompt,
