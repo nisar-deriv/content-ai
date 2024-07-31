@@ -9,9 +9,11 @@ services:
       - "8080:8080"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - USE_OLLAMA=${USE_OLLAMA}
     volumes:
       - .:/app
       - ./data:/app/data
+    network_mode: "host"
 
   report-generator:
     build:
@@ -22,6 +24,21 @@ services:
       - ./data:/app/data
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - USE_OLLAMA=${USE_OLLAMA}
     depends_on:
       - web
     entrypoint: ["sh", "-c", "while sleep 3600; do :; done"]
+    network_mode: "host"
+
+  report:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - USE_OLLAMA=${USE_OLLAMA}
+    network_mode: "host"
+    entrypoint: ["go", "run", "generate_report.go"]

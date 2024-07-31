@@ -8,9 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/regentmarkets/ContentAI/config"
 	"github.com/regentmarkets/ContentAI/data"
 	"github.com/regentmarkets/ContentAI/nlp"
 )
+
+var cfg config.Config
+
+func InitHandlers() {
+	cfg = config.LoadConfig()
+}
 
 type SlackPayload struct {
 	Text string `json:"text"`
@@ -49,11 +56,10 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var enhancedText string
-	useOllama := os.Getenv("USE_OLLAMA")
-	if useOllama == "true" {
+	if cfg.UseOllama {
 		enhancedText, err = nlp.EnhanceTextWithOllama(payload.Text)
 	} else {
-		enhancedText, err = nlp.EnhanceTextWithOpenAI(payload.Text)
+		enhancedText, err = nlp.EnhanceTextWithOpenAI(payload.Text, cfg.OpenAIKey)
 	}
 	if err != nil {
 		http.Error(w, "Error processing text with NLP", http.StatusInternalServerError)

@@ -7,6 +7,8 @@ import (
 )
 
 func main() {
+	handlers.InitHandlers()
+
 	http.HandleFunc("/webhook", handlers.WebhookHandler)
 	http.ListenAndServe(":8080", nil)
 }

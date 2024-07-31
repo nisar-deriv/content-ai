@@ -10,26 +10,24 @@ import (
 )
 
 type ParsedData struct {
-	Progress    string
-	AdHocTasks  string
-	Blockers    string
-	Improvement string
+	Progress string
+	Problems string
+	Plan     string
+	Insights string
 }
 
 func GenerateWeeklyReport() (string, error) {
-	// Get the current date and calculate the week start (Monday) and end (Friday)
 	now := time.Now()
-	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1) // Monday
-	weekEnd := weekStart.AddDate(0, 0, 4)                 // Friday
+	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
+	weekEnd := weekStart.AddDate(0, 0, 4)
 	weekFolder := fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
 
-	// Read all files in the week's folder
 	files, err := os.ReadDir(weekFolder)
 	if err != nil {
 		return "", fmt.Errorf("error reading week folder: %v", err)
 	}
 
-	var progress, adhoc, blockers, improvement []string
+	var progress, problems, plan, insights []string
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -40,20 +38,19 @@ func GenerateWeeklyReport() (string, error) {
 
 			parsedData := parseSlackPayload(content)
 			progress = append(progress, formatTeamSection(file.Name(), parsedData.Progress))
-			adhoc = append(adhoc, formatTeamSection(file.Name(), parsedData.AdHocTasks))
-			blockers = append(blockers, formatTeamSection(file.Name(), parsedData.Blockers))
-			improvement = append(improvement, formatTeamSection(file.Name(), parsedData.Improvement))
+			problems = append(problems, formatTeamSection(file.Name(), parsedData.Problems))
+			plan = append(plan, formatTeamSection(file.Name(), parsedData.Plan))
+			insights = append(insights, formatTeamSection(file.Name(), parsedData.Insights))
 		}
 	}
 
 	finalReport := createFinalReport(
 		strings.Join(progress, "\n"),
-		strings.Join(adhoc, "\n"),
-		strings.Join(blockers, "\n"),
-		strings.Join(improvement, "\n"),
+		strings.Join(problems, "\n"),
+		strings.Join(plan, "\n"),
+		strings.Join(insights, "\n"),
 	)
 
-	// Write final report to a file
 	finalReportFilename := fmt.Sprintf("%s/final_report.html", weekFolder)
 	err = data.WriteToFile(finalReportFilename, finalReport)
 	if err != nil {
@@ -63,7 +60,7 @@ func GenerateWeeklyReport() (string, error) {
 	return finalReportFilename, nil
 }
 
-func createFinalReport(progress, adhoc, blockers, improvement string) string {
+func createFinalReport(progress, problems, plan, insights string) string {
 	return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -122,7 +119,7 @@ func createFinalReport(progress, adhoc, blockers, improvement string) string {
     </div>
 </body>
 </html>
-`, progress, blockers, adhoc, improvement)
+`, progress, problems, plan, insights)
 }
 
 func formatTeamSection(teamName, content string) string {
@@ -140,15 +137,15 @@ func formatTeamSection(teamName, content string) string {
 func getTeamIcon(teamName string) string {
 	switch teamName {
 	case "WinOps":
-		return "/assets/images/winops.png"
+		return "https://path/to/assets/images/winops.png"
 	case "PE Production", "PE Development":
-		return "/assets/images/aws.png"
+		return "https://path/to/assets/images/aws.png"
 	case "DBA":
-		return "/assets/images/dba.png"
+		return "https://path/to/assets/images/dba.png"
 	case "Kubernetes Core":
-		return "/assets/images/kubernetes.png"
+		return "https://path/to/assets/images/kubernetes.png"
 	default:
-		return "/assets/images/default.png"
+		return "https://path/to/assets/images/default.png"
 	}
 }
 
@@ -163,39 +160,39 @@ func formatList(content string) string {
 
 func parseSlackPayload(text string) ParsedData {
 	lines := strings.Split(text, "\n")
-	var progress, adhoc, blockers, improvement []string
+	var progress, problems, plan, insights []string
 	section := ""
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "Cloud Dev Platform Kubernetes progress") {
 			section = "progress"
-		} else if strings.HasPrefix(line, "Ad-Hoc Tasks") {
-			section = "adhoc"
-		} else if strings.HasPrefix(line, "Blockers") {
-			section = "blockers"
-		} else if strings.HasPrefix(line, "Something to improve") {
-			section = "improvement"
+		} else if strings.HasPrefix(line, "Problems") {
+			section = "problems"
+		} else if strings.HasPrefix(line, "Plan") {
+			section = "plan"
+		} else if strings.HasPrefix(line, "Insights") {
+			section = "insights"
 		} else if line == "" {
 			continue
 		} else {
 			switch section {
 			case "progress":
 				progress = append(progress, line)
-			case "adhoc":
-				adhoc = append(adhoc, line)
-			case "blockers":
-				blockers = append(blockers, line)
-			case "improvement":
-				improvement = append(improvement, line)
+			case "problems":
+				problems = append(problems, line)
+			case "plan":
+				plan = append(plan, line)
+			case "insights":
+				insights = append(insights, line)
 			}
 		}
 	}
 
 	return ParsedData{
-		Progress:    strings.Join(progress, "\n"),
-		AdHocTasks:  strings.Join(adhoc, "\n"),
-		Blockers:    strings.Join(blockers, "\n"),
-		Improvement: strings.Join(improvement, "\n"),
+		Progress: strings.Join(progress, "\n"),
+		Problems: strings.Join(problems, "\n"),
+		Plan:     strings.Join(plan, "\n"),
+		Insights: strings.Join(insights, "\n"),
 	}
 }

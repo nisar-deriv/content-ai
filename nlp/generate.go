@@ -6,10 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 )
-
-const apiKeyEnv = "OPENAI_API_KEY"
 
 type OpenAIRequest struct {
 	Model     string `json:"model"`
@@ -33,8 +30,7 @@ type OllamaResponse struct {
 	Text string `json:"text"`
 }
 
-func EnhanceTextWithOpenAI(text string) (string, error) {
-	apiKey := os.Getenv(apiKeyEnv)
+func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
 	if apiKey == "" {
 		return "", fmt.Errorf("OpenAI API key not set")
 	}
