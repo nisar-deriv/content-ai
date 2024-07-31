@@ -48,8 +48,13 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Enhance the text using the NLP model
-	enhancedText, err := nlp.EnhanceText(payload.Text)
+	var enhancedText string
+	useOllama := os.Getenv("USE_OLLAMA")
+	if useOllama == "true" {
+		enhancedText, err = nlp.EnhanceTextWithOllama(payload.Text)
+	} else {
+		enhancedText, err = nlp.EnhanceTextWithOpenAI(payload.Text)
+	}
 	if err != nil {
 		http.Error(w, "Error processing text with NLP", http.StatusInternalServerError)
 		return
