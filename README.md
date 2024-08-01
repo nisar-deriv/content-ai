@@ -34,8 +34,6 @@ This project provides a content writer AI that processes weekly updates from dif
 ## Services
 
 - **web**: Handles incoming requests and processes them.
-- **report-generator**: A dummy service that keeps running to allow manual report generation.
-- **report**: The service that is used to manually generate the report.
 
 ## Usage
 
@@ -44,4 +42,4 @@ This project provides a content writer AI that processes weekly updates from dif
 To manually generate the weekly report, send a GET request to the `/generate-report` endpoint:
 
 ```sh
-curl http://localhost:8181/generate-report
+curl http://localhost:8080/generate-report
