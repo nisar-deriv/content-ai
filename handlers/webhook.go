@@ -3,20 +3,20 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/regentmarkets/ContentAI/config"
-	"github.com/regentmarkets/ContentAI/data"
-	"github.com/regentmarkets/ContentAI/nlp"
 )
 
 var cfg config.Config
 
 func InitHandlers() {
-	cfg = config.LoadConfig()
+	log.Println("Loading configuration")
+	cfg = config.LoadConfig() // Corrected to call without parameters
 }
 
 type SlackPayload struct {
@@ -24,74 +24,67 @@ type SlackPayload struct {
 }
 
 func WebhookHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received request: %s", r.Method)
 	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		log.Printf("Invalid request method: %s", r.Method)
+		http.Error(w, "Invalid request method. Only POST is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var payload SlackPayload
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		http.Error(w, "Error parsing request body", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		log.Printf("Error decoding JSON: %v", err)
+		http.Error(w, fmt.Sprintf("Error parsing request body: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	teamName, err := parseTeamName(payload.Text)
 	if err != nil {
-		http.Error(w, "Error parsing team name", http.StatusBadRequest)
+		log.Printf("Error parsing team name: %v", err)
+		http.Error(w, fmt.Sprintf("Error parsing team name: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	now := time.Now()
-	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
-	weekEnd := weekStart.AddDate(0, 0, 4)
-	weekFolder := fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
-
-	if _, err := os.Stat(weekFolder); os.IsNotExist(err) {
-		err := os.Mkdir(weekFolder, 0755)
-		if err != nil {
-			http.Error(w, "Error creating directory", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	var enhancedText string
-	if cfg.UseOllama {
-		enhancedText, err = nlp.EnhanceTextWithOllama(payload.Text)
-	} else {
-		enhancedText, err = nlp.EnhanceTextWithOpenAI(payload.Text, cfg.OpenAIKey)
-	}
-	if err != nil {
-		http.Error(w, "Error processing text with NLP", http.StatusInternalServerError)
+	weekFolder := getWeekFolder()
+	if err := ensureDirectory(weekFolder); err != nil {
+		log.Printf("Error creating directory %s: %v", weekFolder, err)
+		http.Error(w, fmt.Sprintf("Error creating directory: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	filename := fmt.Sprintf("%s/%s.txt", weekFolder, teamName)
-	err = data.WriteToFile(filename, enhancedText)
-	if err != nil {
-		http.Error(w, "Error writing to file", http.StatusInternalServerError)
+	if err := os.WriteFile(filename, []byte(payload.Text), 0644); err != nil {
+		log.Printf("Error writing to file %s: %v", filename, err)
+		http.Error(w, fmt.Sprintf("Error writing to file: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("Update processed and stored successfully in %s", filename)
 	fmt.Fprintf(w, "Update processed and stored successfully in %s", filename)
 }
 
 func parseTeamName(text string) (string, error) {
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "Team") {
+		if strings.HasPrefix(strings.TrimSpace(line), "Team") {
 			return strings.Fields(line)[1], nil
 		}
 	}
+	log.Println("Team name not found in the text")
 	return "", fmt.Errorf("team name not found")
 }
 
-func ReportGenerationHandler(w http.ResponseWriter, r *http.Request) {
-	filename, err := GenerateWeeklyReport()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error generating weekly report: %v", err), http.StatusInternalServerError)
-		return
+func getWeekFolder() string {
+	now := time.Now()
+	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
+	weekEnd := weekStart.AddDate(0, 0, 4)
+	return fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
+}
+
+func ensureDirectory(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		log.Printf("Creating directory %s", path)
+		return os.Mkdir(path, 0755)
 	}
-	fmt.Fprintf(w, "Weekly report generated successfully: %s", filename)
+	return nil
 }
