@@ -41,7 +41,7 @@ This project provides a content writer AI that processes weekly updates from dif
 
 ### To Manually Generate the Report
 
-To manually generate the weekly report, run the `report` service:
+To manually generate the weekly report, send a GET request to the `/generate-report` endpoint:
 
 ```sh
-docker-compose run report
+curl http://localhost:8080/generate-report

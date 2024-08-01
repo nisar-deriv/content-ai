@@ -86,3 +86,12 @@ func parseTeamName(text string) (string, error) {
 	}
 	return "", fmt.Errorf("team name not found")
 }
+
+func ReportGenerationHandler(w http.ResponseWriter, r *http.Request) {
+	filename, err := GenerateWeeklyReport()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error generating weekly report: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, "Weekly report generated successfully: %s", filename)
+}
