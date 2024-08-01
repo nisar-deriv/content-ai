@@ -44,4 +44,4 @@ This project provides a content writer AI that processes weekly updates from dif
 To manually generate the weekly report, send a GET request to the `/generate-report` endpoint:
 
 ```sh
-curl http://localhost:8080/generate-report
+curl http://localhost:8181/generate-report

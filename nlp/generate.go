@@ -75,7 +75,7 @@ func EnhanceTextWithOllama(text string) (string, error) {
 		Prompt: prompt,
 		Stream: false,
 	})
-	req, err := http.NewRequest("POST", "http://localhost:11434/api/generate", bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", "http://host.docker.internal:11434/api/generate", bytes.NewBuffer(requestBody))
 	if err != nil {
 		return "", err
 	}
