@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -21,62 +19,23 @@ type DetailedPayload struct {
 }
 
 func ReportGenerationHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Starting report generation")
 	filename, err := GenerateWeeklyReport()
 	if err != nil {
-		log.Printf("Error generating weekly report: %v", err)
 		http.Error(w, fmt.Sprintf("Error generating weekly report: %v", err), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Weekly report generated successfully: %s", filename)
 	fmt.Fprintf(w, "Weekly report generated successfully: %s", filename)
 }
 
 func GenerateWeeklyReport() (string, error) {
-	weekFolder, err := prepareWeekFolder()
-	if err != nil {
-		return "", err
-	}
-
-	progress, problems, plan, insights, err := compileReportSections(weekFolder)
-	if err != nil {
-		return "", err
-	}
-
-	finalReport := createFinalReport(
-		strings.Join(progress, "\n\n"),
-		strings.Join(problems, "\n\n"),
-		strings.Join(plan, "\n\n"),
-		strings.Join(insights, "\n\n"),
-	)
-	finalReportFilename := fmt.Sprintf("%s/final_report.html", weekFolder)
-	log.Printf("Writing the final report to %s", finalReportFilename)
-	if err := data.WriteToFile(finalReportFilename, finalReport); err != nil {
-		return "", fmt.Errorf("error writing final report: %v", err)
-	}
-
-	return finalReportFilename, nil
-}
-
-func prepareWeekFolder() (string, error) {
 	now := time.Now()
 	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
 	weekEnd := weekStart.AddDate(0, 0, 4)
 	weekFolder := fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
 
-	if _, err := os.Stat(weekFolder); os.IsNotExist(err) {
-		log.Printf("Creating week folder: %s", weekFolder)
-		if err := os.Mkdir(weekFolder, 0755); err != nil {
-			return "", fmt.Errorf("failed to create week folder: %v", err)
-		}
-	}
-	return weekFolder, nil
-}
-
-func compileReportSections(weekFolder string) ([]string, []string, []string, []string, error) {
 	files, err := os.ReadDir(weekFolder)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error reading week folder: %v", err)
+		return "", fmt.Errorf("error reading week folder: %v", err)
 	}
 
 	var progress, problems, plan, insights []string
@@ -85,25 +44,52 @@ func compileReportSections(weekFolder string) ([]string, []string, []string, []s
 		if !file.IsDir() {
 			content, err := data.ReadFromFile(fmt.Sprintf("%s/%s", weekFolder, file.Name()))
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("error reading file %s: %v", file.Name(), err)
+				return "", fmt.Errorf("error reading file %s: %v", file.Name(), err)
 			}
 
 			parsedData, err := parseDetailedPayload(content)
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("error parsing payload from file %s: %v", file.Name(), err)
+				return "", fmt.Errorf("error parsing payload from file %s: %v", file.Name(), err)
 			}
 
 			enhancedProgress, err := enhanceText(parsedData.Progress)
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("error enhancing progress text: %v", err)
+				return "", fmt.Errorf("error enhancing progress text: %v", err)
 			}
-			progress = append(progress, formatTeamSection(file.Name(), enhancedProgress))
+			enhancedProblems, err := enhanceText(parsedData.Problems)
+			if err != nil {
+				return "", fmt.Errorf("error enhancing problems text: %v", err)
+			}
+			enhancedPlan, err := enhanceText(parsedData.Plan)
+			if err != nil {
+				return "", fmt.Errorf("error enhancing plan text: %v", err)
+			}
+			enhancedInsights, err := enhanceText(parsedData.Insights)
+			if err != nil {
+				return "", fmt.Errorf("error enhancing insights text: %v", err)
+			}
 
-			// Repeat similar process for problems, plan, and insights
+			progress = append(progress, formatTeamSection(file.Name(), enhancedProgress))
+			problems = append(problems, formatTeamSection(file.Name(), enhancedProblems))
+			plan = append(plan, formatTeamSection(file.Name(), enhancedPlan))
+			insights = append(insights, formatTeamSection(file.Name(), enhancedInsights))
 		}
 	}
 
-	return progress, problems, plan, insights, nil
+	finalReport := createFinalReport(
+		strings.Join(progress, "\n"),
+		strings.Join(problems, "\n"),
+		strings.Join(plan, "\n"),
+		strings.Join(insights, "\n"),
+	)
+
+	finalReportFilename := fmt.Sprintf("%s/final_report.html", weekFolder)
+	err = data.WriteToFile(finalReportFilename, finalReport)
+	if err != nil {
+		return "", fmt.Errorf("error writing final report: %v", err)
+	}
+
+	return finalReportFilename, nil
 }
 
 func enhanceText(text string) (string, error) {
@@ -115,9 +101,17 @@ func enhanceText(text string) (string, error) {
 
 func parseDetailedPayload(content string) (DetailedPayload, error) {
 	var payload DetailedPayload
-	err := json.Unmarshal([]byte(content), &payload)
-	if err != nil {
-		return DetailedPayload{}, fmt.Errorf("error parsing payload: %v", err)
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "Progress:") {
+			payload.Progress = strings.TrimSpace(strings.TrimPrefix(line, "Progress:"))
+		} else if strings.HasPrefix(line, "Problems:") {
+			payload.Problems = strings.TrimSpace(strings.TrimPrefix(line, "Problems:"))
+		} else if strings.HasPrefix(line, "Plan:") {
+			payload.Plan = strings.TrimSpace(strings.TrimPrefix(line, "Plan:"))
+		} else if strings.HasPrefix(line, "Insights:") {
+			payload.Insights = strings.TrimSpace(strings.TrimPrefix(line, "Insights:"))
+		}
 	}
 	return payload, nil
 }
