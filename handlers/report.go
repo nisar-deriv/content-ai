@@ -19,15 +19,15 @@ type DetailedPayload struct {
 }
 
 func ReportGenerationHandler(w http.ResponseWriter, r *http.Request) {
-	filename, err := GenerateWeeklyReport()
+	err := GenerateWeeklyReports()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error generating weekly report: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error generating weekly reports: %v", err), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, "Weekly report generated successfully: %s", filename)
+	fmt.Fprintf(w, "Weekly reports generated successfully")
 }
 
-func GenerateWeeklyReport() (string, error) {
+func GenerateWeeklyReports() error {
 	now := time.Now()
 	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
 	weekEnd := weekStart.AddDate(0, 0, 4)
@@ -35,61 +35,62 @@ func GenerateWeeklyReport() (string, error) {
 
 	files, err := os.ReadDir(weekFolder)
 	if err != nil {
-		return "", fmt.Errorf("error reading week folder: %v", err)
+		return fmt.Errorf("error reading week folder: %v", err)
 	}
-
-	var progress, problems, plan, insights []string
 
 	for _, file := range files {
 		if !file.IsDir() {
 			content, err := data.ReadFromFile(fmt.Sprintf("%s/%s", weekFolder, file.Name()))
 			if err != nil {
-				return "", fmt.Errorf("error reading file %s: %v", file.Name(), err)
+				return fmt.Errorf("error reading file %s: %v", file.Name(), err)
 			}
 
 			parsedData, err := parseDetailedPayload(content)
 			if err != nil {
-				return "", fmt.Errorf("error parsing payload from file %s: %v", file.Name(), err)
+				return fmt.Errorf("error parsing payload from file %s: %v", file.Name(), err)
 			}
 
-			enhancedProgress, err := enhanceText(parsedData.Progress)
+			enhancedContent, err := enhanceAndFormatContent(file.Name(), parsedData)
 			if err != nil {
-				return "", fmt.Errorf("error enhancing progress text: %v", err)
-			}
-			enhancedProblems, err := enhanceText(parsedData.Problems)
-			if err != nil {
-				return "", fmt.Errorf("error enhancing problems text: %v", err)
-			}
-			enhancedPlan, err := enhanceText(parsedData.Plan)
-			if err != nil {
-				return "", fmt.Errorf("error enhancing plan text: %v", err)
-			}
-			enhancedInsights, err := enhanceText(parsedData.Insights)
-			if err != nil {
-				return "", fmt.Errorf("error enhancing insights text: %v", err)
+				return fmt.Errorf("error enhancing content for file %s: %v", file.Name(), err)
 			}
 
-			progress = append(progress, formatTeamSection(file.Name(), enhancedProgress))
-			problems = append(problems, formatTeamSection(file.Name(), enhancedProblems))
-			plan = append(plan, formatTeamSection(file.Name(), enhancedPlan))
-			insights = append(insights, formatTeamSection(file.Name(), enhancedInsights))
+			enhancedFilename := fmt.Sprintf("%s/enhanced_%s", weekFolder, file.Name())
+			err = data.WriteToFile(enhancedFilename, enhancedContent)
+			if err != nil {
+				return fmt.Errorf("error writing enhanced content to file %s: %v", enhancedFilename, err)
+			}
 		}
 	}
 
-	finalReport := createFinalReport(
-		strings.Join(progress, "\n"),
-		strings.Join(problems, "\n"),
-		strings.Join(plan, "\n"),
-		strings.Join(insights, "\n"),
-	)
+	return nil
+}
 
-	finalReportFilename := fmt.Sprintf("%s/final_report.html", weekFolder)
-	err = data.WriteToFile(finalReportFilename, finalReport)
+func enhanceAndFormatContent(filename string, data DetailedPayload) (string, error) {
+	enhancedProgress, err := enhanceText(data.Progress)
 	if err != nil {
-		return "", fmt.Errorf("error writing final report: %v", err)
+		return "", fmt.Errorf("error enhancing progress text: %v", err)
+	}
+	enhancedProblems, err := enhanceText(data.Problems)
+	if err != nil {
+		return "", fmt.Errorf("error enhancing problems text: %v", err)
+	}
+	enhancedPlan, err := enhanceText(data.Plan)
+	if err != nil {
+		return "", fmt.Errorf("error enhancing plan text: %v", err)
+	}
+	enhancedInsights, err := enhanceText(data.Insights)
+	if err != nil {
+		return "", fmt.Errorf("error enhancing insights text: %v", err)
 	}
 
-	return finalReportFilename, nil
+	return createEnhancedContent(
+		filename,
+		enhancedProgress,
+		enhancedProblems,
+		enhancedPlan,
+		enhancedInsights,
+	), nil
 }
 
 func enhanceText(text string) (string, error) {
@@ -116,25 +117,19 @@ func parseDetailedPayload(content string) (DetailedPayload, error) {
 	return payload, nil
 }
 
-func formatTeamSection(teamName, text string) string {
-	return fmt.Sprintf("## %s\n%s", teamName, text)
-}
-
-func createFinalReport(progress, problems, plan, insights string) string {
+func createEnhancedContent(filename, progress, problems, plan, insights string) string {
 	return fmt.Sprintf(`
-        <html>
-        <head><title>Weekly Report</title></head>
-        <body>
-            <h1>Weekly Report</h1>
-            <h2>Progress</h2>
-            <p>%s</p>
-            <h2>Problems</h2>
-            <p>%s</p>
-            <h2>Plan</h2>
-            <p>%s</p>
-            <h2>Insights</h2>
-            <p>%s</p>
-        </body>
-        </html>
-    `, progress, problems, plan, insights)
+        Team: %s
+        Progress:
+        %s
+        
+        Problems:
+        %s
+        
+        Plan:
+        %s
+        
+        Insights:
+        %s
+    `, filename, progress, problems, plan, insights)
 }
