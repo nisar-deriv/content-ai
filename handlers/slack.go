@@ -47,7 +47,7 @@ func (s *SlackHandler) FetchMessagesFromChannels(channelIDs []string) (map[strin
 		}
 		log.Printf("Messages fetched for channel %s: %d messages", channelID, len(history.Messages))
 		for _, message := range history.Messages {
-			if message.Text == "weekly update" {
+			if strings.HasPrefix(message.Text, "weekly update") {
 				messages[channelID] = append(messages[channelID], message)
 			}
 		}
@@ -65,6 +65,8 @@ func FetchUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
 		return
 	}
+	// Print messages here for debugging purposes
+	log.Println("Fetched messages:", messages)
 
 	// Serialize messages to JSON
 	jsonData, err := json.Marshal(messages)
@@ -106,9 +108,13 @@ func parseTeamName(text string) (string, error) {
 	log.Println("Parsing team name from text")
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		if strings.HasPrefix(strings.TrimSpace(line), "Team") {
-			log.Printf("Team name found: %s", strings.Fields(line)[1])
-			return strings.Fields(line)[1], nil
+		if strings.HasPrefix(strings.TrimSpace(line), "| Team:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				teamName := strings.TrimSpace(parts[1])
+				log.Printf("Team name found: %s", teamName)
+				return teamName, nil
+			}
 		}
 	}
 	log.Println("Team name not found in the text")
