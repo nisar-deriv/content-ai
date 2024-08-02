@@ -103,7 +103,7 @@ func EnhanceTextWithOllama(text string) (string, error) {
 	// Log the request body
 	log.Printf("Request body being sent: %s", string(requestBody))
 
-	req, err := http.NewRequest("POST", "http://host.docker.internal:11434/api/generate", bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", "http://ollama:11434/api/generate", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Printf("Error creating request to Ollama: %v", err)
 		return "", err
