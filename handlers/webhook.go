@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/regentmarkets/ContentAI/config"
 )
@@ -61,30 +59,4 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Update processed and stored successfully in %s", filename)
 	fmt.Fprintf(w, "Update processed and stored successfully in %s", filename)
-}
-
-func parseTeamName(text string) (string, error) {
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(strings.TrimSpace(line), "Team") {
-			return strings.Fields(line)[1], nil
-		}
-	}
-	log.Println("Team name not found in the text")
-	return "", fmt.Errorf("team name not found")
-}
-
-func getWeekFolder() string {
-	now := time.Now()
-	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
-	weekEnd := weekStart.AddDate(0, 0, 4)
-	return fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
-}
-
-func ensureDirectory(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		log.Printf("Creating directory %s", path)
-		return os.Mkdir(path, 0755)
-	}
-	return nil
 }
