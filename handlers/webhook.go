@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/regentmarkets/ContentAI/config"
 )
@@ -59,4 +60,21 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Update processed and stored successfully in %s", filename)
 	fmt.Fprintf(w, "Update processed and stored successfully in %s", filename)
+}
+
+func parseTeamName(text string) (string, error) {
+	log.Println("Parsing team name from text")
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "| Team:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				teamName := strings.TrimSpace(parts[1])
+				log.Printf("Team name found: %s", teamName)
+				return teamName, nil
+			}
+		}
+	}
+	log.Println("Team name not found in the text")
+	return "", fmt.Errorf("team name not found")
 }
