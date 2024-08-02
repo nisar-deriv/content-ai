@@ -9,8 +9,8 @@ import (
 func main() {
 	handlers.InitHandlers()
 
-	http.HandleFunc("/webhook", handlers.WebhookHandler)
 	http.HandleFunc("/fetch-updates", handlers.FetchUpdatesHandler)
 	http.HandleFunc("/generate-report", handlers.ReportGenerationHandler)
+	http.HandleFunc("/generate-report-ai", handlers.ReportGenerationHandlerAi)
 	http.ListenAndServe(":8080", nil)
 }

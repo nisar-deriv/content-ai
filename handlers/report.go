@@ -2,13 +2,22 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/regentmarkets/ContentAI/config"
 	"github.com/regentmarkets/ContentAI/data"
 	"github.com/regentmarkets/ContentAI/nlp"
 )
+
+var cfg config.Config
+
+func InitHandlers() {
+	log.Println("Loading configuration")
+	cfg = config.LoadConfig() // Corrected to call without parameters
+}
 
 type DetailedPayload struct {
 	Progress string `json:"progress"`
@@ -17,8 +26,8 @@ type DetailedPayload struct {
 	Insights string `json:"insights"`
 }
 
-func ReportGenerationHandler(w http.ResponseWriter, r *http.Request) {
-	err := GenerateWeeklyReports()
+func ReportGenerationHandlerAi(w http.ResponseWriter, r *http.Request) {
+	err := GenerateWeeklyReportsAi()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error generating weekly reports: %v", err), http.StatusInternalServerError)
 		return
@@ -26,7 +35,7 @@ func ReportGenerationHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Weekly reports generated successfully")
 }
 
-func GenerateWeeklyReports() error {
+func GenerateWeeklyReportsAi() error {
 	now := time.Now()
 	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
 	weekEnd := weekStart.AddDate(0, 0, 4)
