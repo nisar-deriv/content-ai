@@ -20,11 +20,16 @@ type SlackHandler struct {
 
 func NewSlackHandler() *SlackHandler {
 	token := os.Getenv("SLACK_API_TOKEN")
+	if token == "" {
+		log.Println("SLACK_API_TOKEN is not set")
+	}
 	client := slack.New(token)
+	log.Println("Slack client initialized")
 	return &SlackHandler{client: client}
 }
 
 func (s *SlackHandler) FetchMessagesFromChannels(channelIDs []string) (map[string][]slack.Message, error) {
+	log.Printf("Fetching messages from channels: %v", channelIDs)
 	messages := make(map[string][]slack.Message)
 	now := time.Now()
 	startOfWeek := now.AddDate(0, 0, -int(now.Weekday()))
@@ -40,19 +45,23 @@ func (s *SlackHandler) FetchMessagesFromChannels(channelIDs []string) (map[strin
 			log.Printf("Error fetching messages from channel %s: %v", channelID, err)
 			return nil, err
 		}
+		log.Printf("Messages fetched for channel %s: %d messages", channelID, len(history.Messages))
 		for _, message := range history.Messages {
 			if message.Text == "weekly update" {
 				messages[channelID] = append(messages[channelID], message)
 			}
 		}
 	}
+	log.Printf("Filtered messages ready for processing: %v", messages)
 	return messages, nil
 }
 
 func FetchUpdatesHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("FetchUpdatesHandler triggered")
 	slackHandler := NewSlackHandler()
 	messages, err := slackHandler.FetchMessagesFromChannels(config.SlackChannelIDs)
 	if err != nil {
+		log.Printf("Failed to fetch messages: %v", err)
 		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
 		return
 	}
@@ -60,6 +69,7 @@ func FetchUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	// Serialize messages to JSON
 	jsonData, err := json.Marshal(messages)
 	if err != nil {
+		log.Printf("Failed to serialize messages: %v", err)
 		http.Error(w, "Failed to serialize messages", http.StatusInternalServerError)
 		return
 	}
@@ -93,9 +103,11 @@ func FetchUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseTeamName(text string) (string, error) {
+	log.Println("Parsing team name from text")
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "Team") {
+			log.Printf("Team name found: %s", strings.Fields(line)[1])
 			return strings.Fields(line)[1], nil
 		}
 	}
@@ -107,13 +119,17 @@ func getWeekFolder() string {
 	now := time.Now()
 	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
 	weekEnd := weekStart.AddDate(0, 0, 4)
-	return fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
+	weekFolder := fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
+	log.Printf("Week folder calculated: %s", weekFolder)
+	return weekFolder
 }
 
 func ensureDirectory(path string) error {
+	log.Printf("Checking directory %s", path)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.Printf("Creating directory %s", path)
 		return os.Mkdir(path, 0755)
 	}
+	log.Printf("Directory already exists: %s", path)
 	return nil
 }
