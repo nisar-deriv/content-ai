@@ -9,6 +9,7 @@ import (
 	"net/http"
 )
 
+// Define the request and response structures
 type OpenAIRequest struct {
 	Model     string `json:"model"`
 	Prompt    string `json:"prompt"`
@@ -28,16 +29,20 @@ type OllamaRequest struct {
 }
 
 type OllamaResponse struct {
-	Text string `json:"text"`
+	Model     string `json:"model"`
+	CreatedAt string `json:"created_at"`
+	Response  string `json:"response"`
+	Done      bool   `json:"done"`
 }
 
+// Function to enhance text using OpenAI
 func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
 	if apiKey == "" {
 		log.Println("Error: OpenAI API key not provided")
 		return "", fmt.Errorf("OpenAI API key not set")
 	}
 
-	prompt := fmt.Sprintf("Enhance the following team update with summaries and insights:\n\n%s", text)
+	prompt := fmt.Sprintf("Enhance the following team update for problems: Progress Plans: insights:\n\n%s", text)
 	requestBody, err := json.Marshal(OpenAIRequest{
 		Model:     "text-davinci-003",
 		Prompt:    prompt,
@@ -75,11 +80,16 @@ func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
 		return "", err
 	}
 
-	return response.Choices[0].Text, nil
+	if len(response.Choices) > 0 {
+		return response.Choices[0].Text, nil
+	}
+
+	return "", fmt.Errorf("no choices in OpenAI response")
 }
 
+// Function to enhance text using Ollama
 func EnhanceTextWithOllama(text string) (string, error) {
-	prompt := fmt.Sprintf("Enhance the following team update with summaries and insights:\n\n%s", text)
+	prompt := fmt.Sprintf("Enhance the following team update for problems: Progress Plans: insights: \n\n%s", text)
 	requestBody, err := json.Marshal(OllamaRequest{
 		Model:  "llama3",
 		Prompt: prompt,
@@ -123,5 +133,5 @@ func EnhanceTextWithOllama(text string) (string, error) {
 		return "", err
 	}
 
-	return response.Text, nil
+	return response.Response, nil
 }

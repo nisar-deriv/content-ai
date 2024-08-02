@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/regentmarkets/ContentAI/data"
@@ -45,12 +44,7 @@ func GenerateWeeklyReports() error {
 				return fmt.Errorf("error reading file %s: %v", file.Name(), err)
 			}
 
-			parsedData, err := parseDetailedPayload(content)
-			if err != nil {
-				return fmt.Errorf("error parsing payload from file %s: %v", file.Name(), err)
-			}
-
-			enhancedContent, err := enhanceAndFormatContent(file.Name(), parsedData)
+			enhancedContent, err := enhanceFullContent(content)
 			if err != nil {
 				return fmt.Errorf("error enhancing content for file %s: %v", file.Name(), err)
 			}
@@ -66,70 +60,9 @@ func GenerateWeeklyReports() error {
 	return nil
 }
 
-func enhanceAndFormatContent(filename string, data DetailedPayload) (string, error) {
-	enhancedProgress, err := enhanceText(data.Progress)
-	if err != nil {
-		return "", fmt.Errorf("error enhancing progress text: %v", err)
-	}
-	enhancedProblems, err := enhanceText(data.Problems)
-	if err != nil {
-		return "", fmt.Errorf("error enhancing problems text: %v", err)
-	}
-	enhancedPlan, err := enhanceText(data.Plan)
-	if err != nil {
-		return "", fmt.Errorf("error enhancing plan text: %v", err)
-	}
-	enhancedInsights, err := enhanceText(data.Insights)
-	if err != nil {
-		return "", fmt.Errorf("error enhancing insights text: %v", err)
-	}
-
-	return createEnhancedContent(
-		filename,
-		enhancedProgress,
-		enhancedProblems,
-		enhancedPlan,
-		enhancedInsights,
-	), nil
-}
-
-func enhanceText(text string) (string, error) {
+func enhanceFullContent(content string) (string, error) {
 	if cfg.UseOllama {
-		return nlp.EnhanceTextWithOllama(text)
+		return nlp.EnhanceTextWithOllama(content)
 	}
-	return nlp.EnhanceTextWithOpenAI(text, cfg.OpenAIKey)
-}
-
-func parseDetailedPayload(content string) (DetailedPayload, error) {
-	var payload DetailedPayload
-	lines := strings.Split(content, "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "Progress:") {
-			payload.Progress = strings.TrimSpace(strings.TrimPrefix(line, "Progress:"))
-		} else if strings.HasPrefix(line, "Problems:") {
-			payload.Problems = strings.TrimSpace(strings.TrimPrefix(line, "Problems:"))
-		} else if strings.HasPrefix(line, "Plan:") {
-			payload.Plan = strings.TrimSpace(strings.TrimPrefix(line, "Plan:"))
-		} else if strings.HasPrefix(line, "Insights:") {
-			payload.Insights = strings.TrimSpace(strings.TrimPrefix(line, "Insights:"))
-		}
-	}
-	return payload, nil
-}
-
-func createEnhancedContent(filename, progress, problems, plan, insights string) string {
-	return fmt.Sprintf(`
-        Team: %s
-        Progress:
-        %s
-        
-        Problems:
-        %s
-        
-        Plan:
-        %s
-        
-        Insights:
-        %s
-    `, filename, progress, problems, plan, insights)
+	return nlp.EnhanceTextWithOpenAI(content, cfg.OpenAIKey)
 }
