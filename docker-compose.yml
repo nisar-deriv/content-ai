@@ -26,10 +26,9 @@ services:
       - "11434"
     volumes:
       - ollama:/root/.ollama
+      - ./entrypoint.sh:/entrypoint.sh  # Mount the entrypoint script
     restart: always
-    environment:
-      - ENGINE=llama3 
-    command: ["sh", "-c", "ollama pull llama3 && ollama start"]
+    entrypoint: ["/entrypoint.sh"]  # Use the custom entrypoint script
 
 volumes:
   ollama: {} 
