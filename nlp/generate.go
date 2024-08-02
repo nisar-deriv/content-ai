@@ -42,7 +42,7 @@ func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
 		return "", fmt.Errorf("OpenAI API key not set")
 	}
 
-	prompt := fmt.Sprintf("Enhance the following team update for problems: Progress Plans: insights:\n\n%s", text)
+	prompt := fmt.Sprintf("Enhance the following team update by maintaining the same format\n\n%s", text)
 	requestBody, err := json.Marshal(OpenAIRequest{
 		Model:     "text-davinci-003",
 		Prompt:    prompt,
@@ -89,7 +89,7 @@ func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
 
 // Function to enhance text using Ollama
 func EnhanceTextWithOllama(text string) (string, error) {
-	prompt := fmt.Sprintf("Enhance the following team update for problems: Progress Plans: insights: \n\n%s", text)
+	prompt := fmt.Sprintf("Enhance the following team update by maintaining the same format \n\n%s", text)
 	requestBody, err := json.Marshal(OllamaRequest{
 		Model:  "llama3",
 		Prompt: prompt,
