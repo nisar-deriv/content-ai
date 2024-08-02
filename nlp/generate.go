@@ -89,6 +89,10 @@ func EnhanceTextWithOllama(text string) (string, error) {
 		log.Printf("Error marshalling Ollama request: %v", err)
 		return "", err
 	}
+
+	// Log the request body
+	log.Printf("Request body being sent: %s", string(requestBody))
+
 	req, err := http.NewRequest("POST", "http://host.docker.internal:11434/api/generate", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Printf("Error creating request to Ollama: %v", err)
@@ -109,6 +113,9 @@ func EnhanceTextWithOllama(text string) (string, error) {
 		log.Printf("Error reading response body from Ollama: %v", err)
 		return "", err
 	}
+
+	// Log the response body
+	log.Printf("Response body received: %s", string(body))
 
 	var response OllamaResponse
 	if err := json.Unmarshal(body, &response); err != nil {
