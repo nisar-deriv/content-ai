@@ -9,7 +9,8 @@ services:
     environment:
       - OPENAI_API_KEY=dummy
       - USE_OLLAMA=true
-      - SLACK_API_TOKEN=dummy
+    env_file:
+      - .env
     volumes:
       - .:/app
       - ./data:/app/data
