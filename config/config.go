@@ -14,16 +14,19 @@ var SlackChannelIDs = map[string]string{
 }
 
 type Config struct {
-	UseOllama bool
-	OpenAIKey string
+	UseOllama     bool
+	OpenAIKey     string
+	GitHubRepoURL string
 }
 
 func LoadConfig() Config {
 	useOllama := os.Getenv("USE_OLLAMA") == "true"
 	openAIKey := os.Getenv("OPENAI_API_KEY")
+	gitHubRepoURL := os.Getenv("GITHUB_REPO_URL")
 
 	return Config{
-		UseOllama: useOllama,
-		OpenAIKey: openAIKey,
+		UseOllama:     useOllama,
+		OpenAIKey:     openAIKey,
+		GitHubRepoURL: gitHubRepoURL,
 	}
 }

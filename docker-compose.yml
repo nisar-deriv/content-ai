@@ -9,6 +9,7 @@ services:
     environment:
       - OPENAI_API_KEY=dummy
       - USE_OLLAMA=true
+      - GITHUB_REPO_URL=git@github.com:nisar-deriv/infra-tribe-website.git
     env_file:
       - .env
     volumes:
