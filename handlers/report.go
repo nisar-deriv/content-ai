@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/regentmarkets/ContentAI/config"
 	"github.com/regentmarkets/ContentAI/data"
@@ -36,11 +35,7 @@ func ReportGenerationHandlerAi(w http.ResponseWriter, r *http.Request) {
 }
 
 func GenerateWeeklyReportsAi() error {
-	now := time.Now()
-	weekStart := now.AddDate(0, 0, -int(now.Weekday())+1)
-	weekEnd := weekStart.AddDate(0, 0, 4)
-	weekFolder := fmt.Sprintf("Week %s to %s", weekStart.Format("2006-01-02"), weekEnd.Format("2006-01-02"))
-
+	weekFolder := getWeekFolder()
 	files, err := os.ReadDir(weekFolder)
 	if err != nil {
 		return fmt.Errorf("error reading week folder: %v", err)

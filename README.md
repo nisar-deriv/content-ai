@@ -37,9 +37,16 @@ This project provides a content writer AI that processes weekly updates from dif
 
 ## Usage
 
-### To Manually Generate the Report
+### To Manually Fetch Updates From Slack channels
 
-To manually generate the weekly report, send a GET request to the `/generate-report` endpoint:
+To manually Fetch Updates from slack, send a GET request to the `/fetch-updates` endpoint:
 
 ```sh
-curl http://localhost:8080/generate-report
+curl http://localhost:8080/fetch-updates
+
+### To Manually Generate the Report
+
+To manually generate the weekly report, send a GET request to the `/generate-report-ai` endpoint:
+
+```sh
+curl http://localhost:8080/generate-report-ai
