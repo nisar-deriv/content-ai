@@ -11,6 +11,7 @@ import (
 
 	"github.com/regentmarkets/ContentAI/config"
 	"github.com/slack-go/slack"
+	"gopkg.in/yaml.v2"
 )
 
 type SlackHandler struct {
@@ -27,9 +28,9 @@ func NewSlackHandler() *SlackHandler {
 	return &SlackHandler{client: client}
 }
 
-func (s *SlackHandler) FetchMessagesFromChannels(teamNames []string) (map[string][]slack.Message, error) {
+func (s *SlackHandler) FetchMessagesFromChannels(teamNames []string) (map[string][]string, error) { // Change return type
 	log.Printf("Fetching messages for teams: %v", teamNames)
-	messages := make(map[string][]slack.Message)
+	messages := make(map[string][]string) // Change map type
 	now := time.Now()
 	startOfWeek := now.AddDate(0, 0, -int(now.Weekday()))
 
@@ -53,7 +54,7 @@ func (s *SlackHandler) FetchMessagesFromChannels(teamNames []string) (map[string
 		log.Printf("Messages fetched for channel %s: %d messages", channelID, len(history.Messages))
 		for _, message := range history.Messages {
 			if strings.HasPrefix(message.Text, "weekly update") {
-				messages[channelID] = append(messages[channelID], message)
+				messages[channelID] = append(messages[channelID], message.Text) // Append only Text field
 			}
 		}
 	}
@@ -93,13 +94,15 @@ func FetchUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		var sb strings.Builder
-		for _, message := range teamMessages {
-			sb.WriteString(message.Text + "\n") // Assuming 'Text' is the field for message text
+		yamlData, err := yaml.Marshal(teamMessages)
+		if err != nil {
+			log.Printf("Error marshaling YAML for team %s: %v", teamName, err)
+			http.Error(w, fmt.Sprintf("Error marshaling YAML for team %s: %v", teamName, err), http.StatusInternalServerError)
+			continue
 		}
 
-		filename := fmt.Sprintf("%s/%s.txt", weekFolder, teamName)
-		if err := os.WriteFile(filename, []byte(sb.String()), 0644); err != nil {
+		filename := fmt.Sprintf("%s/%s.yaml", weekFolder, teamName)
+		if err := os.WriteFile(filename, yamlData, 0644); err != nil {
 			log.Printf("Error writing to file %s for team %s: %v", filename, teamName, err)
 			http.Error(w, fmt.Sprintf("Error writing to file for team %s: %v", teamName, err), http.StatusInternalServerError)
 			continue

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,9 +18,8 @@ import (
 var cfg config.Config
 
 func InitHandlers() {
-	log.Println("Starting to load configuration")
-	cfg = config.LoadConfig()
-	log.Println("Configuration loaded successfully")
+	log.Println("Loading configuration")
+	cfg = config.LoadConfig() // Corrected to call without parameters
 }
 
 type DetailedPayload struct {
@@ -49,7 +47,8 @@ func GenerateWeeklyReportsAi() error {
 
 	for _, file := range files {
 		if !file.IsDir() {
-			content, err := data.ReadFromFile(fmt.Sprintf("%s/%s", weekFolder, file.Name()))
+			var content map[string]interface{}
+			err := data.ReadFromFile(fmt.Sprintf("%s/%s", weekFolder, file.Name()), &content)
 			if err != nil {
 				return fmt.Errorf("error reading file %s: %v", file.Name(), err)
 			}
@@ -60,19 +59,13 @@ func GenerateWeeklyReportsAi() error {
 			}
 
 			enhancedFilename := fmt.Sprintf("%s/enhanced_%s", weekFolder, file.Name())
-			// Check if the enhanced file already exists and delete it
-			if _, err := os.Stat(enhancedFilename); err == nil {
-				err = os.Remove(enhancedFilename)
-				if err != nil {
-					return fmt.Errorf("error deleting existing enhanced file %s: %v", enhancedFilename, err)
-				}
-			}
 			err = data.WriteToFile(enhancedFilename, enhancedContent)
 			if err != nil {
 				return fmt.Errorf("error writing enhanced content to file %s: %v", enhancedFilename, err)
 			}
 		}
 	}
+
 	// Set up SSH key
 	err = setupSSHKey()
 	if err != nil {
@@ -118,23 +111,34 @@ func GenerateWeeklyReportsAi() error {
 	return nil
 }
 
-func enhanceFullContent(content string) (string, error) {
-	if cfg.UseOllama {
-		return nlp.EnhanceTextWithOllama(content)
+func enhanceFullContent(content map[string]interface{}) (map[string]interface{}, error) {
+	textContent, ok := content["text"].(string)
+	if !ok {
+		return nil, fmt.Errorf("content does not have 'text' field")
 	}
-	return nlp.EnhanceTextWithOpenAI(content, cfg.OpenAIKey)
+
+	var enhancedText string
+	var err error
+	if cfg.UseOllama {
+		enhancedText, err = nlp.EnhanceTextWithOllama(textContent)
+	} else {
+		enhancedText, err = nlp.EnhanceTextWithOpenAI(textContent, cfg.OpenAIKey)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	content["text"] = enhancedText
+	return content, nil
 }
 
 func cloneGitHubRepo(repoURL string) (string, error) {
-	log.Printf("Cloning GitHub repository from %s", repoURL)
 	cloneDir := "/tmp/repo"
 	cmd := exec.Command("git", "clone", repoURL, cloneDir)
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("Failed to clone repository: %v", err)
 		return "", err
 	}
-	log.Println("Repository cloned successfully")
 	return cloneDir, nil
 }
 
@@ -150,31 +154,22 @@ func getMondayDate() string {
 
 func constructMarkdownContent(files []os.DirEntry, weekFolder string) (string, error) {
 	var progress, problems, plan, insights strings.Builder
-	log.Println("Starting to construct markdown content")
 
 	for _, file := range files {
 		if !file.IsDir() {
-			log.Printf("Processing file: %s\n", file.Name())
-
-			content, err := data.ReadFromFile(filepath.Join(weekFolder, file.Name()))
+			var content map[string]interface{}
+			err := data.ReadFromFile(filepath.Join(weekFolder, file.Name()), &content)
 			if err != nil {
-				log.Printf("Error reading file %s: %v\n", file.Name(), err)
 				return "", fmt.Errorf("error reading file %s: %v", file.Name(), err)
 			}
 
-			log.Printf("Successfully read file: %s\n", file.Name())
-
 			enhancedContent, err := enhanceFullContent(content)
 			if err != nil {
-				log.Printf("Error enhancing content for file %s: %v\n", file.Name(), err)
 				return "", fmt.Errorf("error enhancing content for file %s: %v", file.Name(), err)
 			}
 
-			log.Printf("Successfully enhanced content for file: %s\n", file.Name())
-
 			// Parse the enhanced content and append to the respective sections
 			parseContent(enhancedContent, &progress, &problems, &plan, &insights)
-			log.Printf("Parsed content for file: %s\n", file.Name())
 		}
 	}
 
@@ -214,35 +209,44 @@ Greetings, fellow Derivians! Wrapping up another week of Production Operations a
 	return mdContent, nil
 }
 
-func parseContent(content string, progress, problems, plan, insights *strings.Builder) {
+func parseContent(content map[string]interface{}, progress, problems, plan, insights *strings.Builder) {
 	// Implement logic to parse the content and append to the respective sections
 }
 
 func commitAndPushChanges(cloneDir, mdFilename string) error {
-	log.Printf("Committing changes in directory %s", cloneDir)
-	cmd := exec.Command("git", "add", mdFilename)
-	err := cmd.Run()
+	// Change to the cloned repository directory
+	err := os.Chdir(cloneDir)
 	if err != nil {
-		log.Printf("Failed to add file %s: %v", mdFilename, err)
-		return err
+		return fmt.Errorf("error changing directory to %s: %v", cloneDir, err)
 	}
-	log.Println("File added successfully")
 
+	// Add the markdown file to the repository
+	cmd := exec.Command("git", "add", mdFilename)
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error adding file %s: %v", mdFilename, err)
+	}
+
+	// Commit the changes
 	cmd = exec.Command("git", "commit", "-m", "Add weekly report")
 	err = cmd.Run()
 	if err != nil {
-		log.Printf("Failed to commit changes: %v", err)
-		return err
+		return fmt.Errorf("error committing changes: %v", err)
 	}
-	log.Println("Changes committed successfully")
 
+	// Push the changes
 	cmd = exec.Command("git", "push", "origin", "main")
 	err = cmd.Run()
 	if err != nil {
-		log.Printf("Failed to push changes: %v", err)
-		return err
+		return fmt.Errorf("error pushing changes: %v", err)
 	}
-	log.Println("Changes pushed successfully")
+
+	// Raise a pull request (this is a placeholder, you need to use GitHub API or a CLI tool like hub or gh)
+	cmd = exec.Command("gh", "pr", "create", "--title", "Weekly Report", "--body", "This PR contains the weekly report.")
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error creating pull request: %v", err)
+	}
 
 	return nil
 }
@@ -253,20 +257,14 @@ func setupSSHKey() error {
 		return fmt.Errorf("GIT_DEPLOY_KEY is not set in the environment")
 	}
 
-	// Decode the base64 encoded deploy key
-	decodedKey, err := base64.StdEncoding.DecodeString(deployKey)
-	if err != nil {
-		return fmt.Errorf("error decoding base64 deploy key: %v", err)
-	}
-
 	sshDir := os.Getenv("HOME") + "/.ssh"
-	err = os.MkdirAll(sshDir, 0700)
+	err := os.MkdirAll(sshDir, 0700)
 	if err != nil {
 		return fmt.Errorf("error creating .ssh directory: %v", err)
 	}
 
 	keyPath := sshDir + "/id_rsa"
-	err = os.WriteFile(keyPath, decodedKey, 0600)
+	err = os.WriteFile(keyPath, []byte(deployKey), 0600)
 	if err != nil {
 		return fmt.Errorf("error writing deploy key to file: %v", err)
 	}

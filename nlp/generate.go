@@ -89,7 +89,7 @@ func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
 
 // Function to enhance text using Ollama
 func EnhanceTextWithOllama(text string) (string, error) {
-	prompt := fmt.Sprintf("Enhance the following team update by maintaining the same format \n\n%s", text)
+	prompt := fmt.Sprintf("Enhance the following team update by maintaining the same format also no bold adjust to correct yaml format\n\n%s", text)
 	requestBody, err := json.Marshal(OllamaRequest{
 		Model:  "llama3",
 		Prompt: prompt,
