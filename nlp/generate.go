@@ -9,19 +9,6 @@ import (
 	"net/http"
 )
 
-// Define the request and response structures
-type OpenAIRequest struct {
-	Model     string `json:"model"`
-	Prompt    string `json:"prompt"`
-	MaxTokens int    `json:"max_tokens"`
-}
-
-type OpenAIResponse struct {
-	Choices []struct {
-		Text string `json:"text"`
-	} `json:"choices"`
-}
-
 type OllamaRequest struct {
 	Model  string `json:"model"`
 	Prompt string `json:"prompt"`
@@ -33,58 +20,6 @@ type OllamaResponse struct {
 	CreatedAt string `json:"created_at"`
 	Response  string `json:"response"`
 	Done      bool   `json:"done"`
-}
-
-// Function to enhance text using OpenAI
-func EnhanceTextWithOpenAI(text, apiKey string) (string, error) {
-	if apiKey == "" {
-		log.Println("Error: OpenAI API key not provided")
-		return "", fmt.Errorf("OpenAI API key not set")
-	}
-
-	prompt := fmt.Sprintf("Enhance the following team update by maintaining the same format\n\n%s", text)
-	requestBody, err := json.Marshal(OpenAIRequest{
-		Model:     "text-davinci-003",
-		Prompt:    prompt,
-		MaxTokens: 150,
-	})
-	if err != nil {
-		log.Printf("Error marshalling OpenAI request: %v", err)
-		return "", err
-	}
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/completions", bytes.NewBuffer(requestBody))
-	if err != nil {
-		log.Printf("Error creating request to OpenAI: %v", err)
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("Error sending request to OpenAI: %v", err)
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error reading response body from OpenAI: %v", err)
-		return "", err
-	}
-
-	var response OpenAIResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		log.Printf("Error unmarshalling OpenAI response: %v", err)
-		return "", err
-	}
-
-	if len(response.Choices) > 0 {
-		return response.Choices[0].Text, nil
-	}
-
-	return "", fmt.Errorf("no choices in OpenAI response")
 }
 
 // Function to enhance text using Ollama
@@ -124,14 +59,15 @@ func EnhanceTextWithOllama(text string) (string, error) {
 		return "", err
 	}
 
-	// Log the response body
-	log.Printf("Response body received: %s", string(body))
-
 	var response OllamaResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		log.Printf("Error unmarshalling Ollama response: %v", err)
 		return "", err
 	}
 
-	return response.Response, nil
+	if response.Done {
+		return response.Response, nil
+	}
+
+	return "", fmt.Errorf("incomplete response from Ollama")
 }

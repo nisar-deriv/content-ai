@@ -2,21 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
-	"github.com/regentmarkets/ContentAI/config"
 	"github.com/regentmarkets/ContentAI/data"
 	"github.com/regentmarkets/ContentAI/nlp"
 )
-
-var cfg config.Config
-
-func InitHandlers() {
-	log.Println("Loading configuration")
-	cfg = config.LoadConfig() // Corrected to call without parameters
-}
 
 type DetailedPayload struct {
 	Progress string `json:"progress"`
@@ -65,8 +56,5 @@ func GenerateWeeklyReportsAi() error {
 }
 
 func enhanceFullContent(content string) (string, error) {
-	if cfg.UseOllama {
-		return nlp.EnhanceTextWithOllama(content)
-	}
-	return nlp.EnhanceTextWithOpenAI(content, cfg.OpenAIKey)
+	return nlp.EnhanceTextWithOllama(content)
 }

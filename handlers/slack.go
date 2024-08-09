@@ -109,6 +109,8 @@ func FetchUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "Updates processed and stored successfully for all teams")
+	// Call to convert files to YAML after successful updates
+	ConvertFilesToYaml()
 }
 
 func getWeekFolder() string {

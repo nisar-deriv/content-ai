@@ -7,8 +7,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - OPENAI_API_KEY=dummy
-      - USE_OLLAMA=true
       - GITHUB_REPO_URL=git@github.com:nisar-deriv/infra-tribe-website.git
     env_file:
       - .env
@@ -19,7 +17,6 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - ollama
-
   ollama:
     image: ollama/ollama
     container_name: ollama
@@ -32,6 +29,5 @@ services:
       - ./entrypoint.sh:/entrypoint.sh  # Mount the entrypoint script
     restart: always
     entrypoint: ["/entrypoint.sh"]  # Use the custom entrypoint script
-
 volumes:
-  ollama: {} 
+  ollama: {}

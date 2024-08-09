@@ -1,6 +1,6 @@
 # Content Writer AI
 
-This project provides a content writer AI that processes weekly updates from different teams, enhances the text using NLP models, stores the updates, and compiles a final report. The project supports both OpenAI GPT-3/4 and a local Ollama server for text enhancement.
+This project provides a content writer AI that processes weekly updates from different teams, enhances the text using NLP models, stores the updates, and compiles a final report. The project supports a local Ollama server for text enhancement.
 
 ## Prerequisites
 
@@ -18,12 +18,7 @@ This project provides a content writer AI that processes weekly updates from dif
 
 2. **Set Environment Variables:**
 
-    Set your OpenAI API key and the `USE_OLLAMA` environment variable.
-
-    ```sh
-    export OPENAI_API_KEY=your_openai_api_key
-    export USE_OLLAMA=true  # or false
-    ```
+    Set your environment variables as needed.
 
 3. **Build and Run the Docker Containers:**
 
@@ -43,10 +38,3 @@ To manually Fetch Updates from slack, send a GET request to the `/fetch-updates`
 
 ```sh
 curl http://localhost:8080/fetch-updates
-
-### To Manually Generate the Report
-
-To manually generate the weekly report, send a GET request to the `/generate-report-ai` endpoint:
-
-```sh
-curl http://localhost:8080/generate-report-ai

@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-	handlers.InitHandlers()
 
 	http.HandleFunc("/fetch-updates", handlers.FetchUpdatesHandler)
 	//http.HandleFunc("/generate-report", handlers.ReportGenerationHandler)
