@@ -22,9 +22,17 @@ type OllamaResponse struct {
 	Done      bool   `json:"done"`
 }
 
+type TeamUpdate struct {
+	Team     string   `yaml:"Team"`
+	Problems []string `yaml:"Problems"`
+	Progress []string `yaml:"Progress"`
+	Insights []string `yaml:"Insights"`
+	Plans    []string `yaml:"Plans"`
+}
+
 // Function to enhance text using Ollama
 func EnhanceTextWithOllama(text string) (string, error) {
-	prompt := fmt.Sprintf("Enhance the following team update by maintaining the same format \n\n%s", text)
+	prompt := fmt.Sprintf("Please enhance the text under the sections Problems, Progress, Insights, and Plans by adding more detail and using more sophisticated language while strictly maintaining the original bullet point format. Each item should remain as a single concise statement without breaking into sub-points or detailed explanations. Focus on using precise and technical terms appropriate for an IT professional audience and final output should be a yaml and no sub list converstion \n\n%s", text)
 	requestBody, err := json.Marshal(OllamaRequest{
 		Model:  "llama3",
 		Prompt: prompt,

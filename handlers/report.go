@@ -5,16 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/regentmarkets/ContentAI/data"
 	"github.com/regentmarkets/ContentAI/nlp"
 )
-
-type DetailedPayload struct {
-	Progress string `json:"progress"`
-	Problems string `json:"problems"`
-	Plan     string `json:"plan"`
-	Insights string `json:"insights"`
-}
 
 func ReportGenerationHandlerAi(w http.ResponseWriter, r *http.Request) {
 	err := GenerateWeeklyReportsAi()
@@ -34,21 +26,23 @@ func GenerateWeeklyReportsAi() error {
 
 	for _, file := range files {
 		if !file.IsDir() {
-			content, err := data.ReadFromFile(fmt.Sprintf("%s/%s", weekFolder, file.Name()))
+			filePath := fmt.Sprintf("%s/%s", weekFolder, file.Name())
+			content, err := os.ReadFile(filePath)
 			if err != nil {
 				return fmt.Errorf("error reading file %s: %v", file.Name(), err)
 			}
 
-			enhancedContent, err := enhanceFullContent(content)
+			enhancedContent, err := enhanceFullContent(string(content))
 			if err != nil {
 				return fmt.Errorf("error enhancing content for file %s: %v", file.Name(), err)
 			}
 
 			enhancedFilename := fmt.Sprintf("%s/enhanced_%s", weekFolder, file.Name())
-			err = data.WriteToFile(enhancedFilename, enhancedContent)
+			err = os.WriteFile(enhancedFilename, []byte(enhancedContent), 0644)
 			if err != nil {
 				return fmt.Errorf("error writing enhanced content to file %s: %v", enhancedFilename, err)
 			}
+
 		}
 	}
 
